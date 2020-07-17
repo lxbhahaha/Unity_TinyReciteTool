@@ -39,9 +39,9 @@ public class ContentManager : MonoBehaviour {
     // 存放加载的贴图
     Dictionary<string, Texture2D> loadedTextures = new Dictionary<string, Texture2D>();
     // 存放序号的数组
-    private int[] indexArray;
+    private int[] currentIndexesArr = null;
     // 当前的序号
-    private int currentIndex;
+    private int currentIndex = 0;
     // 当前的排序类型
     public enum SortType
     {
@@ -205,8 +205,11 @@ public class ContentManager : MonoBehaviour {
         }
         Log(string.Format("成功加载{0}个问答组合", numOfQanA));
 
+        // 处理排序
+        ReSortIndexArr();
+
         // 自动切换问题
-        currentIndex = -1;
+        currentIndex = 0;
         NextQuestion();
     }
 
@@ -218,6 +221,45 @@ public class ContentManager : MonoBehaviour {
     {
         if (value) sortType = SortType.random;
         else sortType = SortType.order;
+
+        // 处理排序
+        ReSortIndexArr();
+        currentIndex = 0;
+    }
+    /// <summary>
+    /// 根据随机状态设置索引数组
+    /// </summary>
+    public void ReSortIndexArr()
+    {
+        // 初始化为顺序排序的索引
+        currentIndexesArr = new int[contents.Count];
+        for (int i = 0; i < contents.Count; i++)
+        {
+            currentIndexesArr[i] = i;
+        }
+
+        // 如果是随机排序就随机排序
+        if (sortType == SortType.random)
+        {
+            Dictionary<int, int> tempDic = new Dictionary<int, int>();
+            int tempNum = 0;
+            for (int i = 0; i < contents.Count; i++)
+            {
+                do
+                { tempNum = Random.Range(0, contents.Count); }
+                while (tempDic.ContainsValue(tempNum));
+                tempDic[i] = tempNum;
+            }
+            for (int i = 0; i < contents.Count; i++)
+            {
+                currentIndexesArr[i] = tempDic[i];
+            }
+        }
+
+        for (int i = 0; i < contents.Count; i++)
+        {
+            Debug.Log(currentIndexesArr[i]);
+        }
     }
 
     /// <summary>
@@ -236,19 +278,23 @@ public class ContentManager : MonoBehaviour {
     {
         if (contents.Count == 0) return;
 
-        switch (sortType)
-        {
-            case SortType.random:
-                currentIndex = Random.Range(0, contents.Count);
-                break;
-            case SortType.order:
-                currentIndex++;
-                if (currentIndex >= contents.Count) currentIndex = 0;
-                break;
-            default:
-                break;
-        }
-        ChangeImage(contents[currentIndex].question);
+        ++currentIndex;
+        if (currentIndex >= currentIndexesArr.Length) currentIndex = 0;
+        int temp = currentIndex;
+
+        ChangeImage(contents[currentIndexesArr[temp]].question);
+    }
+    /// <summary>
+    /// 上一个问题
+    /// </summary>
+    public void LastQuestion()
+    {
+        if (contents.Count == 0) return;
+        --currentIndex;
+        if (currentIndex < 0) currentIndex = currentIndexesArr.Length - 1;
+        int temp = currentIndex;
+
+        ChangeImage(contents[currentIndexesArr[temp]].question);
     }
 
     /// <summary>
