@@ -269,7 +269,7 @@ public class ContentManager : MonoBehaviour {
     {
         if (contents.Count == 0) return;
 
-        ChangeImage(contents[currentIndex].answer);
+        ChangeImage(contents[currentIndexesArr[currentIndex]].answer);
     }
     /// <summary>
     /// 下一问题
@@ -280,9 +280,9 @@ public class ContentManager : MonoBehaviour {
 
         ++currentIndex;
         if (currentIndex >= currentIndexesArr.Length) currentIndex = 0;
-        int temp = currentIndex;
+        //int temp = currentIndex;
 
-        ChangeImage(contents[currentIndexesArr[temp]].question);
+        ChangeImage(contents[currentIndexesArr[currentIndex]].question);
     }
     /// <summary>
     /// 上一个问题
@@ -292,9 +292,9 @@ public class ContentManager : MonoBehaviour {
         if (contents.Count == 0) return;
         --currentIndex;
         if (currentIndex < 0) currentIndex = currentIndexesArr.Length - 1;
-        int temp = currentIndex;
+        //int temp = currentIndex;
 
-        ChangeImage(contents[currentIndexesArr[temp]].question);
+        ChangeImage(contents[currentIndexesArr[currentIndex]].question);
     }
 
     /// <summary>
