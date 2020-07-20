@@ -4,6 +4,7 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEditor;
+using System;
 
 /// <summary>
 /// 问答组合
@@ -11,16 +12,80 @@ using UnityEditor;
 public class Content {
     // 问题以及答案
     public Texture2D question, answer;
+    // 问题图片的绝对路径
+    public string fullName;
+    // 问题图片的相对路径
+    public string RelativePath
+    {
+        get { return fullName.Substring(ContentManager.contentRootPath.Length); } // 去掉前面的绝对路径，只要文件夹+图片的部分
+    }
     // 构造函数
-    public Content(Texture2D ques,Texture2D ans)
+    public Content(Texture2D ques,Texture2D ans, string fullName)
     {
         question = ques;
         answer = ans;
+        this.fullName = fullName;
+    }
+}
+
+[Serializable]
+public class MarkedQandA
+{
+    // 记录所有已标记的相对地址
+    public string[] allContents;
+
+    public MarkedQandA(string[] value)
+    {
+        allContents = value;
+    }
+}
+
+public static class JsonData
+{
+    public static string markJsonPath = ""; // Start里面定义
+    public static MarkedQandA markedQand;
+
+    /// <summary>
+    /// 保存已标记问题的列表
+    /// </summary>
+    /// <param name="value"></param>
+    public static void SaveMarkList(List<string> value)
+    {
+        // 转成可序列化的内容
+        markedQand = new MarkedQandA(value.ToArray());
+        
+        // 转成Json
+        string json = JsonUtility.ToJson(markedQand);
+
+        // 写成Json
+        File.WriteAllText(markJsonPath, json);
+    }
+    
+    public static List<String> ReadMarkList()
+    {
+        List<string> res = new List<string>();
+
+        // 如果没有该文件则返回
+        if (!File.Exists(markJsonPath)) return res;
+
+        // 读取Json
+        StreamReader streamReader = new StreamReader(markJsonPath);
+        string jsonStr = streamReader.ReadToEnd();
+        markedQand = JsonUtility.FromJson<MarkedQandA>(jsonStr);
+
+        // 转成List
+        for (int i = 0; i < markedQand.allContents.Length; i++)
+        {
+            res.Add(markedQand.allContents[i]);
+        }
+
+        return res;
     }
 }
 
 public class ContentManager : MonoBehaviour {
-    // logUI
+    #region UI
+    // log
     public Text logText;
     // 显示的图像
     public RawImage image;
@@ -30,8 +95,13 @@ public class ContentManager : MonoBehaviour {
     public Slider loadingSlider;
     // 选择文件夹
     public Dropdown folderDropdown;
-    // 存放所有内容的根路径
-    private static string mainPath;
+    // 标记按钮
+    public Toggle markToggle;
+    // 标记过滤按钮
+    public Toggle markedFitlerToggle;
+    #endregion
+
+    #region 容器
     // 加载的所有问答组合
     public List<Content> contents = new List<Content>();
     // 所有文件夹
@@ -40,6 +110,11 @@ public class ContentManager : MonoBehaviour {
     Dictionary<string, Texture2D> loadedTextures = new Dictionary<string, Texture2D>();
     // 存放序号的数组
     private int[] currentIndexesArr = null;
+    // 标记的内容
+    private List<string> markedList = new List<string>();
+    #endregion
+    // 存放所有内容的根路径
+    public static string contentRootPath;
     // 当前的序号
     private int currentIndex = 0;
     // 当前的排序类型
@@ -52,9 +127,17 @@ public class ContentManager : MonoBehaviour {
 
     private void Start()
     {
-        mainPath = Application.dataPath + "/ContentData/";
+        // 初始化内容的根目录
+        contentRootPath = Application.dataPath + "/ContentData/";
+        // 初始化标记json文件的路径
+        JsonData.markJsonPath = Application.dataPath + "/marked.json";
+        // 读取json
+        markedList = JsonData.ReadMarkList();
+        // 加载文件夹
         LoadFolders();
+        // 读取现在是乱序还是顺序
         sortType = sortToggle.isOn ? SortType.random : SortType.order;
+        // 加载当前选择的文件的内容
         LoadContentInFolder(allFolders[folderDropdown.value]);
     }
 
@@ -72,7 +155,7 @@ public class ContentManager : MonoBehaviour {
         Log("加载 " + folder + " 中...");
 
         // 读取一个文件夹
-        string currentPath = mainPath + folder + "/";
+        string currentPath = contentRootPath + folder + "/";
         if (Directory.Exists(currentPath))
         {
             DirectoryInfo direction = new DirectoryInfo(currentPath);
@@ -102,7 +185,7 @@ public class ContentManager : MonoBehaviour {
             loadingSlider.gameObject.SetActive(true);
             Log("加载 全部 中...");
 
-            string currentPath = mainPath + item + "/";
+            string currentPath = contentRootPath + item + "/";
             if (Directory.Exists(currentPath))
             {
                 DirectoryInfo direction = new DirectoryInfo(currentPath);
@@ -125,7 +208,7 @@ public class ContentManager : MonoBehaviour {
         // 清空
         allFolders.Clear();
         folderDropdown.options.Clear();
-        DirectoryInfo direction = new DirectoryInfo(mainPath);
+        DirectoryInfo direction = new DirectoryInfo(contentRootPath);
         DirectoryInfo[] subDirs = direction.GetDirectories();
 
         // 记录每一个文件夹的名字
@@ -145,7 +228,10 @@ public class ContentManager : MonoBehaviour {
     /// <param name="index"></param>
     public void SelectFolder(int index)
     {
-        if(index == allFolders.Count) //全部
+        // 存一下当前json
+        JsonData.SaveMarkList(markedList);
+
+        if (index == allFolders.Count) //全部
         {
             LoadAllContent();
         }
@@ -194,8 +280,7 @@ public class ContentManager : MonoBehaviour {
             if (loadedTextures.TryGetValue(item.Key + "-", out tempT2d))
             {
                 // 加入问答组合中
-                contents.Add(new Content(item.Value, tempT2d));
-
+                contents.Add(new Content(item.Value, tempT2d, item.Key));
                 numOfQanA++;
             }
             else
@@ -211,6 +296,29 @@ public class ContentManager : MonoBehaviour {
         // 自动切换问题
         currentIndex = 0;
         NextQuestion();
+    }
+
+    /// <summary>
+    /// 设置是否标记
+    /// </summary>
+    /// <param name="value"></param>
+    public void SetMark(bool value)
+    {
+        // 获取当前图片问题的相对路径
+        string currentName = contents[currentIndexesArr[currentIndex]].RelativePath;
+
+        if (value) // 标记
+        {
+            if (!markedList.Contains(currentName)) // 不存在才添加（因为用代码修改Toggle状态也会调用这个函数）
+                markedList.Add(currentName);
+        }
+        else // 取消标记
+        {
+            if (markedList.Contains(currentName))
+                markedList.Remove(currentName);
+            else
+                Debug.Log(currentName + " 取消标记时不存在与List中。");
+        }
     }
 
     /// <summary>
@@ -246,7 +354,7 @@ public class ContentManager : MonoBehaviour {
             for (int i = 0; i < contents.Count; i++)
             {
                 do
-                { tempNum = Random.Range(0, contents.Count); }
+                { tempNum = UnityEngine.Random.Range(0, contents.Count); }
                 while (tempDic.ContainsValue(tempNum));
                 tempDic[i] = tempNum;
             }
@@ -254,11 +362,6 @@ public class ContentManager : MonoBehaviour {
             {
                 currentIndexesArr[i] = tempDic[i];
             }
-        }
-
-        for (int i = 0; i < contents.Count; i++)
-        {
-            Debug.Log(currentIndexesArr[i]);
         }
     }
 
@@ -270,6 +373,8 @@ public class ContentManager : MonoBehaviour {
         if (contents.Count == 0) return;
 
         ChangeImage(contents[currentIndexesArr[currentIndex]].answer);
+
+        CheckMarked();
     }
     /// <summary>
     /// 下一问题
@@ -277,12 +382,29 @@ public class ContentManager : MonoBehaviour {
     public void NextQuestion()
     {
         if (contents.Count == 0) return;
-
-        ++currentIndex;
-        if (currentIndex >= currentIndexesArr.Length) currentIndex = 0;
-        //int temp = currentIndex;
-
+        if (markedFitlerToggle.isOn) // 开启过滤的话
+        {
+            int tempIndex = currentIndex; // 记录一下当前的index
+            do
+            {
+                ++currentIndex;
+                if (currentIndex >= currentIndexesArr.Length) currentIndex = 0;
+                if (tempIndex == currentIndex) // 如果饶了一周还是原来这个就跳出
+                {
+                    Log("没有了");
+                    break;
+                }
+            } while (!markedList.Contains(contents[currentIndexesArr[currentIndex]].RelativePath));// 找到下一个标记的为止
+        }
+        else // 没有开启过滤的话
+        {
+            ++currentIndex;
+            if (currentIndex >= currentIndexesArr.Length) currentIndex = 0;
+        }
+            
         ChangeImage(contents[currentIndexesArr[currentIndex]].question);
+
+        CheckMarked();
     }
     /// <summary>
     /// 上一个问题
@@ -290,11 +412,30 @@ public class ContentManager : MonoBehaviour {
     public void LastQuestion()
     {
         if (contents.Count == 0) return;
-        --currentIndex;
-        if (currentIndex < 0) currentIndex = currentIndexesArr.Length - 1;
-        //int temp = currentIndex;
 
+        if (markedFitlerToggle.isOn) // 开启过滤的话
+        {
+            int tempIndex = currentIndex; // 记录一下当前的index
+            do
+            {
+                --currentIndex;
+                if (currentIndex < 0) currentIndex = currentIndexesArr.Length - 1;
+                if(tempIndex == currentIndex) // 如果饶了一周还是原来这个就跳出
+                {
+                    Log("没有了");
+                    break;
+                }
+            } while (!markedList.Contains(contents[currentIndexesArr[currentIndex]].RelativePath));// 找到下一个标记的为止
+        }
+        else // 没有开启过滤的话
+        {    
+            --currentIndex;
+            if (currentIndex < 0) currentIndex = currentIndexesArr.Length - 1;
+        }
+        // 修改图片
         ChangeImage(contents[currentIndexesArr[currentIndex]].question);
+
+        CheckMarked();
     }
 
     /// <summary>
@@ -308,10 +449,22 @@ public class ContentManager : MonoBehaviour {
     }
 
     /// <summary>
+    /// 检查当前问题有没有被标记
+    /// </summary>
+    private void CheckMarked()
+    {
+        // 查找到已标记就打开Toggle，没有就关闭
+        markToggle.isOn = markedList.Contains(contents[currentIndexesArr[currentIndex]].RelativePath);
+    }
+
+    /// <summary>
     /// 退出
     /// </summary>
     public void Quit()
     {
+        // 存一下当前json
+        JsonData.SaveMarkList(markedList);
+
 #if UNITY_EDITOR
         EditorApplication.ExitPlaymode();
 #else
