@@ -152,6 +152,10 @@ public class ContentManager : MonoBehaviour {
         }else if (Input.GetButtonDown("ShowAnswer"))
         {
             ShowAnswer();
+        }else if (Input.GetButtonDown("Mark"))
+        {
+            //SetMark(!markToggle.isOn);
+            markToggle.isOn = !markToggle.isOn;
         }
     }
 
