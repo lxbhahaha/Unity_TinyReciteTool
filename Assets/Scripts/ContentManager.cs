@@ -141,6 +141,20 @@ public class ContentManager : MonoBehaviour {
         LoadContentInFolder(allFolders[folderDropdown.value]);
     }
 
+    private void Update()
+    {
+        if (Input.GetButtonDown("Next"))
+        {
+            NextQuestion();
+        }else if (Input.GetButtonDown("Last"))
+        {
+            LastQuestion();
+        }else if (Input.GetButtonDown("ShowAnswer"))
+        {
+            ShowAnswer();
+        }
+    }
+
     /// <summary>
     /// 加载一个文件夹内的问答内容
     /// </summary>
@@ -368,7 +382,7 @@ public class ContentManager : MonoBehaviour {
     /// <summary>
     /// 显示答案
     /// </summary>
-    public void ShowAnser()
+    public void ShowAnswer()
     {
         if (contents.Count == 0) return;
 
