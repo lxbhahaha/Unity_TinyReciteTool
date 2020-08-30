@@ -6,7 +6,10 @@
 
 ## 添加数据
 
-在`ContentData`文件夹里面按子文件夹分类，子文件夹中放入图片，图片名称后加“`-`”表示是答案。
+在电脑上自己喜欢的位置创建一个文件夹“newFile”，（newFile叫什么都行，随意）。然后在“newFile”文件夹中创建一个`ContentData`，`ContentData`文件夹里面按子文件夹分类，子文件夹中放入图片，图片名称后加“`-`”表示是答案。
 
-如果是在Unity源工程中在 `Assets\ContentData\` ，如果是导出的项目文件夹在 `随机背书_Data\ContentData\` 。
+在文件夹 `随机背书_Data\`中创建一个`path.txt`(有则不用创建)，里面放上“newFile”的绝对路径。==注意，分隔符要用反斜杠。两个斜杠也不行==。
+
+如果是在Unity源工程中在 `Assets`下创建`path.txt`。
 ![image](https://github.com/lxbhahaha/Unity_TinyReciteTool/blob/master/Pictures/ContentData.png?raw=true)
+

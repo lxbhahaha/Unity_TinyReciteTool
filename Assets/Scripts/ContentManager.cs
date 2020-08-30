@@ -127,10 +127,16 @@ public class ContentManager : MonoBehaviour {
 
     private void Start()
     {
+        // 读取内容目录地址
+        string rootPath = new StreamReader(Application.dataPath + "/path.txt").ReadToEnd();
+        // 判断是否地址存在
+        if (!Directory.Exists(rootPath)) Log("path.txt中的地址<" + rootPath + ">不存在");
+        
+
         // 初始化内容的根目录
-        contentRootPath = Application.dataPath + "/ContentData/";
+        contentRootPath = rootPath + "/ContentData/";
         // 初始化标记json文件的路径
-        JsonData.markJsonPath = Application.dataPath + "/marked.json";
+        JsonData.markJsonPath = rootPath + "/marked.json";
         // 读取json
         markedList = JsonData.ReadMarkList();
         // 加载文件夹
@@ -419,8 +425,11 @@ public class ContentManager : MonoBehaviour {
             ++currentIndex;
             if (currentIndex >= currentIndexesArr.Length) currentIndex = 0;
         }
-            
+        // 修改图片
         ChangeImage(contents[currentIndexesArr[currentIndex]].question);
+
+        // 显示名称
+        Log(contents[currentIndexesArr[currentIndex]].RelativePath);
 
         CheckMarked();
     }
@@ -452,6 +461,9 @@ public class ContentManager : MonoBehaviour {
         }
         // 修改图片
         ChangeImage(contents[currentIndexesArr[currentIndex]].question);
+
+        // 显示名称
+        Log(contents[currentIndexesArr[currentIndex]].RelativePath);
 
         CheckMarked();
     }
